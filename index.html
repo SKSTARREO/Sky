@@ -84,17 +84,17 @@
 
     <div class="card">
         <h1>Video Streamer</h1>
-        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Upload video & get instant streaming short link</p>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Upload video & get instant streaming link</p>
         
         <form id="uploadForm">
             <label class="upload-box" id="dropZone">
                 <span id="fileLabel">📁 Click to select video file</span>
-                <input type="file" id="videoInput" name="file" accept="video/*" required>
+                <input type="file" id="videoInput" name="video" accept="video/*" required>
             </label>
             <button type="submit" id="uploadBtn">Upload & Generate Link</button>
         </form>
 
-        <div class="loader" id="loader">Uploading directly to cloud, please wait...</div>
+        <div class="loader" id="loader">Uploading video to cloud, please wait...</div>
 
         <div class="result" id="resultBox">
             <p style="margin: 0 0 8px 0; font-size: 0.9rem;">✅ Your Stream Link:</p>
@@ -120,39 +120,32 @@
             e.preventDefault();
             if(!videoInput.files.length) return;
 
-            const file = videoInput.files[0];
             const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', 'ml_default');
+            formData.append('video', videoInput.files[0]);
 
             loader.style.display = 'block';
             resultBox.style.display = 'none';
 
             try {
-                // Sahi cloud name 'kaia1ga5' yahan set kar diya hai
-                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/kaia1ga5/video/upload', {
+                const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData
                 });
-                const cloudData = await cloudinaryRes.json();
-
-                if(!cloudData.secure_url) {
-                    throw new Error(cloudData.error ? cloudData.error.message : 'Unknown Cloudinary error');
+                
+                const textResponse = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(textResponse);
+                } catch(err) {
+                    throw new Error("Server returned non-JSON response: " + textResponse.slice(0, 100));
                 }
-
-                const saveRes = await fetch('/api/save-link', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ secure_url: cloudData.secure_url })
-                });
-                const saveData = await saveRes.json();
-
-                if(saveData.success) {
-                    shortLinkTag.href = saveData.shortLink;
-                    shortLinkTag.textContent = saveData.shortLink;
+                
+                if(data.success) {
+                    shortLinkTag.href = data.shortLink;
+                    shortLinkTag.textContent = data.shortLink;
                     resultBox.style.display = 'block';
                 } else {
-                    alert('Failed to save link on server.');
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
                 }
             } catch (err) {
                 console.error(err);
