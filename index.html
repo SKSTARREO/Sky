@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Streamer & Uploader</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent-color: #38bdf8;
+            --text-color: #f1f5f9;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-image: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.1) 0%, transparent 40%);
+        }
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+        h1 { margin-top: 0; font-size: 1.8rem; color: #fff; }
+        .upload-box {
+            border: 2px dashed rgba(56, 189, 248, 0.4);
+            padding: 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .upload-box:hover {
+            border-color: var(--accent-color);
+            background: rgba(56, 189, 248, 0.05);
+        }
+        input[type="file"] { display: none; }
+        button {
+            background: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .result {
+            margin-top: 20px;
+            word-break: break-all;
+            display: none;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            text-align: left;
+        }
+        .result a { color: var(--accent-color); text-decoration: none; font-weight: bold; }
+        .loader {
+            display: none;
+            margin-top: 15px;
+            color: var(--accent-color);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>Video Streamer</h1>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px;">Upload video & get instant streaming short link</p>
+        
+        <form id="uploadForm">
+            <label class="upload-box" id="dropZone">
+                <span id="fileLabel">📁 Click to select video file</span>
+                <input type="file" id="videoInput" name="video" accept="video/*" required>
+            </label>
+            <button type="submit" id="uploadBtn">Upload & Generate Link</button>
+        </form>
+
+        <div class="loader" id="loader">Uploading video to cloud, please wait...</div>
+
+        <div class="result" id="resultBox">
+            <p style="margin: 0 0 8px 0; font-size: 0.9rem;">✅ Your Stream Link:</p>
+            <a id="shortLinkTag" href="#" target="_blank"></a>
+        </div>
+    </div>
+
+    <script>
+        const videoInput = document.getElementById('videoInput');
+        const fileLabel = document.getElementById('fileLabel');
+        const uploadForm = document.getElementById('uploadForm');
+        const loader = document.getElementById('loader');
+        const resultBox = document.getElementById('resultBox');
+        const shortLinkTag = document.getElementById('shortLinkTag');
+
+        videoInput.addEventListener('change', () => {
+            if(videoInput.files.length > 0) {
+                fileLabel.textContent = `Selected: ${videoInput.files[0].name}`;
+            }
+        });
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!videoInput.files.length) return;
+
+            const formData = new FormData();
+            formData.append('video', videoInput.files[0]);
+
+            loader.style.display = 'block';
+            resultBox.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if(data.success) {
+                    shortLinkTag.href = data.shortLink;
+                    shortLinkTag.textContent = data.shortLink;
+                    resultBox.style.display = 'block';
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred during upload.');
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
