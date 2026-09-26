@@ -94,7 +94,7 @@
             <button type="submit" id="uploadBtn">Upload & Generate Link</button>
         </form>
 
-        <div class="loader" id="loader">Uploading video to cloud, please wait...</div>
+        <div class="loader" id="loader">Uploading directly to cloud, please wait...</div>
 
         <div class="result" id="resultBox">
             <p style="margin: 0 0 8px 0; font-size: 0.9rem;">✅ Your Stream Link:</p>
@@ -120,29 +120,44 @@
             e.preventDefault();
             if(!videoInput.files.length) return;
 
+            const file = videoInput.files[0];
             const formData = new FormData();
-            formData.append('video', videoInput.files[0]);
+            formData.append('file', file);
+            formData.append('upload_preset', 'ml_default'); // Cloudinary ka default unsigned preset
 
             loader.style.display = 'block';
             resultBox.style.display = 'none';
 
             try {
-                const response = await fetch('/api/upload', {
+                // Step 1: Direct upload to Cloudinary from browser
+                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/Kala1ga5/video/upload', {
                     method: 'POST',
                     body: formData
                 });
-                const data = await response.json();
-                
-                if(data.success) {
-                    shortLinkTag.href = data.shortLink;
-                    shortLinkTag.textContent = data.shortLink;
+                const cloudData = await cloudinaryRes.json();
+
+                if(!cloudData.secure_url) {
+                    throw new Error('Cloudinary upload failed');
+                }
+
+                // Step 2: Save the URL to our backend mapping
+                const saveRes = await fetch('/api/save-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ secure_url: cloudData.secure_url })
+                });
+                const saveData = await saveRes.json();
+
+                if(saveData.success) {
+                    shortLinkTag.href = saveData.shortLink;
+                    shortLinkTag.textContent = saveData.shortLink;
                     resultBox.style.display = 'block';
                 } else {
-                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    alert('Failed to generate short link.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('An error occurred during upload.');
+                alert('An error occurred during upload. Make sure Cloudinary Unsigned Upload is enabled in your settings.');
             } finally {
                 loader.style.display = 'none';
             }
