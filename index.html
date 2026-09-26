@@ -129,8 +129,8 @@
             resultBox.style.display = 'none';
 
             try {
-                // Cloud name lowercase mein rakha hai
-                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/kala1ga5/video/upload', {
+                // Sahi cloud name 'kaia1ga5' yahan set kar diya hai
+                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/kaia1ga5/video/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -156,7 +156,7 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert('Error: ' + err.message); // Ab yahan asli error message dikhega
+                alert('Error: ' + err.message);
             } finally {
                 loader.style.display = 'none';
             }
