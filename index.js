@@ -1,51 +1,23 @@
 const express = require('express');
-const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
 
 const app = express();
 app.use(express.json());
 
-// Cloudinary Configuration (Aapki details ke sath configured)
-cloudinary.config({
-    cloud_name: 'Kala1ga5',
-    api_key: '964276561231151',
-    api_secret: 'Odp6sSN7DjiyFHkPPslTNtYm9h8'
-});
-
-// Temporary storage for multer before uploading to Cloudinary
-const uploadDir = path.join('/tmp', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-const upload = multer({ dest: uploadDir });
-
 // In-memory database for short links mapping
 global.videoDB = global.videoDB || {};
 
-// 1. Upload Endpoint (Directly uploads to Cloudinary)
-app.post('/api/upload', upload.single('video'), async (req, res) => {
+// Save link endpoint (Frontend direct upload ke baad URL yahan save hoga)
+app.post('/api/save-link', (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No video uploaded!' });
+        const { secure_url } = req.body;
+        if (!secure_url) {
+            return res.status(400).json({ error: 'No URL provided!' });
         }
 
-        // Upload file to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-            resource_type: 'video',
-            folder: 'vercel_streamer'
-        });
-
-        // Delete temporary local file
-        fs.unlinkSync(req.file.path);
-
         const videoId = uuidv4().slice(0, 8); // Short ID
-        global.videoDB[videoId] = {
-            secure_url: result.secure_url,
-            public_id: result.public_id
-        };
+        global.videoDB[videoId] = { secure_url };
 
         const host = req.headers['x-forwarded-host'] || req.get('host');
         const protocol = req.headers['x-forwarded-proto'] || 'http';
@@ -54,11 +26,11 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
         res.json({ success: true, shortLink, videoId });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Cloudinary upload failed!' });
+        res.status(500).json({ error: 'Failed to save link' });
     }
 });
 
-// 2. Watch Page Route (Streams video via Cloudinary URL)
+// Watch Page Route (Streams video via Cloudinary URL)
 app.get('/watch/:id', (req, res) => {
     const videoId = req.params.id;
     const videoData = global.videoDB[videoId];
