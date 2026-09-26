@@ -89,7 +89,7 @@
         <form id="uploadForm">
             <label class="upload-box" id="dropZone">
                 <span id="fileLabel">📁 Click to select video file</span>
-                <input type="file" id="videoInput" name="video" accept="video/*" required>
+                <input type="file" id="videoInput" name="file" accept="video/*" required>
             </label>
             <button type="submit" id="uploadBtn">Upload & Generate Link</button>
         </form>
@@ -123,24 +123,23 @@
             const file = videoInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('upload_preset', 'ml_default'); // Cloudinary ka default unsigned preset
+            formData.append('upload_preset', 'ml_default');
 
             loader.style.display = 'block';
             resultBox.style.display = 'none';
 
             try {
-                // Step 1: Direct upload to Cloudinary from browser
-                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/Kala1ga5/video/upload', {
+                // Cloud name lowercase mein rakha hai
+                const cloudinaryRes = await fetch('https://api.cloudinary.com/v1_1/kala1ga5/video/upload', {
                     method: 'POST',
                     body: formData
                 });
                 const cloudData = await cloudinaryRes.json();
 
                 if(!cloudData.secure_url) {
-                    throw new Error('Cloudinary upload failed');
+                    throw new Error(cloudData.error ? cloudData.error.message : 'Unknown Cloudinary error');
                 }
 
-                // Step 2: Save the URL to our backend mapping
                 const saveRes = await fetch('/api/save-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -153,11 +152,11 @@
                     shortLinkTag.textContent = saveData.shortLink;
                     resultBox.style.display = 'block';
                 } else {
-                    alert('Failed to generate short link.');
+                    alert('Failed to save link on server.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('An error occurred during upload. Make sure Cloudinary Unsigned Upload is enabled in your settings.');
+                alert('Error: ' + err.message); // Ab yahan asli error message dikhega
             } finally {
                 loader.style.display = 'none';
             }
